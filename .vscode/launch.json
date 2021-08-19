@@ -10,6 +10,18 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal"
-        }
+        },
+        {
+            "name": "Create VW LM Dataset",
+            "type": "python",
+            "request": "launch",
+            "program": "${cwd}/create_vw_lm_dataset.py",
+            "console": "integratedTerminal",
+            "args": ["--output-dir", "/home/dedey/logdir", 
+                "--vocab-embeddings-file", 
+                "/home/dedey/dataroot/char_embeddings/transxl_char_params_80M_input_lookup.json", 
+                "--context-length", "5"]
+        },
+
     ]
 }
