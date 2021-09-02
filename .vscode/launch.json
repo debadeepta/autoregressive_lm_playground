@@ -17,12 +17,24 @@
             "request": "launch",
             "program": "${cwd}/create_vw_lm_dataset.py",
             "console": "integratedTerminal",
-            "args": ["--output-dir", "/home/dedey/dataroot/textpred/wikitext2-vw", 
+            "args": ["--output-dir", "C:\\Users\\dedey\\dataroot\\textpred\\wikitext2-vw", 
                 "--vocab-embeddings-file", 
-                "/home/dedey/dataroot/char_embeddings/transxl_char_params_80M_input_lookup.json", 
+                "C:\\Users\\dedey\\dataroot\\textpred\\transxl_char_params_80M_input_lookup.json", 
                 "--context-length", "20",
                 "--max-examples", "100000",
                 "--vw-file-name", "wikitext2_train_cl20_100k_vw"]
+        },
+        {
+            "name": "Train VW on WikiText",
+            "type": "python",
+            "request": "launch",
+            "program": "${cwd}/train_vw_on_wikitext.py",
+            "console": "integratedTerminal",
+            "args": ["--output-dir", "C:\\Users\\dedey\\dataroot\\textpred\\wikitext2-vw", 
+                "--vocab-embeddings-file", 
+                "C:\\Users\\dedey\\dataroot\\textpred\\transxl_char_params_80M_input_lookup.json", 
+                "--context-length", "20",
+                "--max-examples", "1000"]
         },
 
     ]
