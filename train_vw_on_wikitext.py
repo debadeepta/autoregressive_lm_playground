@@ -72,7 +72,7 @@ def create_vw_examples(raw_text_iter: dataset.IterableDataset,
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Report creator')
+    parser = argparse.ArgumentParser(description='Train VW model')
     parser.add_argument('--output-dir', '-o', type=str,
                         default=r'~/dataroot/vw_dataset',
                         help='full path to output directory')
@@ -112,16 +112,27 @@ def main():
                         stoi, 
                         num_max_examples=args.max_examples)
 
-    vw = pyvw.vw('--oaa 131 -b 24')
+    vw = pyvw.vw('--oaa 131 -b 24 -f my_best_model')
     for ex in example_store:
-        vw.learn(ex)
-        vw.predict(ex)
-    
-    vw.save('vw_model')
+        vw_ex = vw.example(ex)
+        vw.learn(vw_ex)
+        print(f'current prediction = {vw_ex.get_multiclass_prediction()}')
+        vw.finish_example(vw_ex)
 
-    test_ex = example_store[0][1:]
-    prediction = vw.predict(test_ex)
-    print(prediction)
+    
+    test_ex_splits = [feat for feat in example_store[0].split('|')]
+    test_gt = test_ex_splits[0]
+    test_ex = '|' + '|'.join(test_ex_splits[1:])
+    prediction = vw.predict(vw.example(test_ex))
+    print(f'Test gt: {test_gt}, predicted: {prediction}')
+
+    vw.finish()
+
+    vw = pyvw.vw('-i my_best_model')
+    prediction = vw.predict(vw.example(test_ex))
+    print(f'Test gt: {test_gt}, predicted: {prediction}')
+    vw.finish()
+
 
 
     
