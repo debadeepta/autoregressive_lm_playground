@@ -1,4 +1,5 @@
 import math
+import random
 import argparse
 from typing import Tuple, Dict, List
 from collections import defaultdict
@@ -15,12 +16,15 @@ from torchtext.datasets import WikiText103
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 
+from vowpalwabbit import pyvw
+
 
 def create_vw_examples(raw_text_iter: dataset.IterableDataset, 
                         context_length:int, 
                         stoe:Dict[str, List[float]], 
                         stoi:Dict[str, int],
-                        vw_file_name: str):
+                        vw_file_name: str,
+                        num_max_examples: int=-1):
     # extract character sequences of context length and the next target character
     char_seqs = []
     char_targets = []
@@ -39,38 +43,50 @@ def create_vw_examples(raw_text_iter: dataset.IterableDataset,
     print(f'created {len(char_seqs)} examples')
 
     # featurize each example
-    with open(vw_file_name, 'wt') as f:
-        for char_seq, char_target in tqdm(zip(char_seqs, char_targets)):
-            target_idx = stoi[char_target]
-            if target_idx == -1:
-                continue
-            feature_string = ''
-            feature_list = []
-            for char in char_seq:
-                embed = stoe[char]
-                if embed == 'missing':
-                    continue
-                feature_list.extend(embed)
-            for idx, feat in enumerate(feature_list):
-                feature_string += str(idx) + ':' + feat + ' '
-            example_string = str(target_idx) + ' ' + '|'  + ' '  + feature_string + '\n'
-            f.write(example_string)
-        
-
-
+    example_store = []
     
+    for char_seq, char_target in tqdm(zip(char_seqs, char_targets)):
 
+        if num_max_examples > 0 and len(example_store) > num_max_examples:
+            break
+
+        target_idx = stoi[char_target]
+        if target_idx == -1:
+            continue
+        feature_string = ''
+        feature_list = []
+        for idx,char in enumerate(char_seq):
+            embed = stoe[char]
+            if embed == 'missing':
+                continue
+            feature_list.append(embed)
+        for idx, embed in enumerate(feature_list):
+            feature_string += '|' + str(idx) + ' '
+            for fidx, feat in enumerate(embed):
+                feature_string += str(fidx) + ':' + feat + ' '
+        example_string = str(target_idx) + ' ' + feature_string + '\n'
+        example_store.append(example_string)
+
+    # shuffle the examples
+    random.shuffle(example_store)
+    with open(vw_file_name, 'w') as f:
+        f.writelines(example_store)
+        
 
 
 def main():
     parser = argparse.ArgumentParser(description='Report creator')
     parser.add_argument('--output-dir', '-o', type=str,
-                        default=r'~/logdir/vw_dataset',
+                        default=r'~/dataroot/vw_dataset',
                         help='full path to output directory')
     parser.add_argument('--vocab-embeddings-file', '-e', type=str,
                         help='full path to character level vocab embeddings')
     parser.add_argument('--context-length', '-l', type=int,
                         help='number of last character embeddings to use as features')
+    parser.add_argument('--max-examples', '-m', type=int,
+                        help='maximum number of examples to generate in vw format')
+    parser.add_argument('--vw-file-name', '-f', type=str,
+                        help='name of the vw data file')
     args, extra_args = parser.parse_known_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -95,8 +111,14 @@ def main():
 
     # create vw examples
     train_iter, val_iter, test_iter = WikiText2()
-    vw_file_name = os.path.join(args.output_dir, 'wikitext2_train_vw.txt')
-    create_vw_examples(train_iter, args.context_length, stoe, stoi, vw_file_name)    
+    vw_file_name = os.path.join(args.output_dir, args.vw_file_name)
+    create_vw_examples(train_iter, 
+                        args.context_length, 
+                        stoe, 
+                        stoi, 
+                        vw_file_name, 
+                        num_max_examples=args.max_examples)
+
 
     
 
