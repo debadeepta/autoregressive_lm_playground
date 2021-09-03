@@ -33,7 +33,7 @@
             "args": ["--output-dir", "C:\\Users\\dedey\\dataroot\\textpred\\wikitext2-vw", 
                 "--vocab-embeddings-file", 
                 "C:\\Users\\dedey\\dataroot\\textpred\\transxl_char_params_80M_input_lookup.json", 
-                "--context-length", "50",
+                "--context-length", "20",
                 "--max-examples", "10000",
                 "--num-passes", "10"]
         },

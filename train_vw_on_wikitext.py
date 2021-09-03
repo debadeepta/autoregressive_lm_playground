@@ -18,28 +18,28 @@ from torchtext.vocab import build_vocab_from_iterator
 
 from vowpalwabbit import pyvw
 
+def create_char_seqs(text_str:str, context_length:int)->Tuple[List[List[str]], List[str]]:
+    chars = list(text_str.rstrip('\n'))
+    if len(chars) < context_length + 1:
+        return None, None
+    else:
+        seqs = []
+        targets = []
+        end = len(chars) - context_length
+        for s in range(end):
+            seq = chars[s:s+context_length]
+            target = chars[s+context_length]
+            seqs.append(seq)
+            targets.append(target)
+        return seqs, targets
+            
 
-def create_vw_examples(raw_text_iter: dataset.IterableDataset, 
-                        context_length:int, 
+
+def featurize_char_seqs(char_seqs:List[List[str]], 
+                        char_targets:List[str], 
+                        num_max_examples:int, 
                         stoe:Dict[str, List[float]], 
-                        stoi:Dict[str, int],
-                        num_max_examples: int=-1):
-    # extract character sequences of context length and the next target character
-    char_seqs = []
-    char_targets = []
-    for item in raw_text_iter:
-        chars = list(item.rstrip('\n'))
-        if len(chars) < context_length + 1:
-            continue
-        else:
-            end = len(chars) - context_length
-            for s in range(end):
-                seq = chars[s:s+context_length]
-                target = chars[s+context_length]
-                char_seqs.append(seq)
-                char_targets.append(target)
-
-    print(f'created {len(char_seqs)} examples')
+                        stoi:Dict[str, int])->List[str]:
 
     # featurize each example
     example_store = []
@@ -57,15 +57,37 @@ def create_vw_examples(raw_text_iter: dataset.IterableDataset,
         for idx,char in enumerate(char_seq):
             embed = stoe[char]
             if embed == 'missing':
-                continue
+                embed = stoe['<unk>']
             feature_list.append(embed)
         for idx, embed in enumerate(feature_list):
             feature_string += '|' + str(idx) + ' '
             for fidx, feat in enumerate(embed):
                 feature_string += str(fidx) + ':' + feat + ' '
         example_string = str(target_idx) + ' ' + feature_string + '\n'
-        example_store.append(example_string)
+        example_store.append(example_string) 
 
+    return example_store
+
+def create_vw_examples(raw_text_iter: dataset.IterableDataset, 
+                        context_length:int, 
+                        stoe:Dict[str, List[float]], 
+                        stoi:Dict[str, int],
+                        num_max_examples: int=-1):
+    # extract character sequences of context length and the next target character
+    char_seqs = []
+    char_targets = []
+    for item in raw_text_iter:
+        seqs, targets = create_char_seqs(item, context_length)
+        if seqs:
+            char_seqs.extend(seqs)
+            char_targets.extend(targets)
+
+    print(f'created {len(char_seqs)} examples')
+
+    example_store = featurize_char_seqs(char_seqs, 
+                                        char_targets, 
+                                        num_max_examples, 
+                                        stoe, stoi)
     # shuffle the examples
     random.shuffle(example_store)
     return example_store    
@@ -117,6 +139,7 @@ def main():
     vw = pyvw.vw('--oaa 131 -b 24 -f my_best_model')
     for p in range(args.num_passes):
         for ex in example_store:
+            # TODO: create example batch on the fly
             vw_ex = vw.example(ex)
             vw.learn(vw_ex)
             #print(f'current prediction = {vw_ex.get_multiclass_prediction()}')
