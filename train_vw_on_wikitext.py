@@ -82,6 +82,8 @@ def main():
                         help='number of last character embeddings to use as features')
     parser.add_argument('--max-examples', '-m', type=int,
                         help='maximum number of examples to generate in vw format')
+    parser.add_argument('--num-passes', '-p', type=int,
+                        help='number of passes over the dataset')
     args, extra_args = parser.parse_known_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -113,25 +115,53 @@ def main():
                         num_max_examples=args.max_examples)
 
     vw = pyvw.vw('--oaa 131 -b 24 -f my_best_model')
-    for ex in example_store:
-        vw_ex = vw.example(ex)
-        vw.learn(vw_ex)
-        print(f'current prediction = {vw_ex.get_multiclass_prediction()}')
-        vw.finish_example(vw_ex)
+    for p in range(args.num_passes):
+        for ex in example_store:
+            vw_ex = vw.example(ex)
+            vw.learn(vw_ex)
+            #print(f'current prediction = {vw_ex.get_multiclass_prediction()}')
+            vw.finish_example(vw_ex)
 
     
+    # Test how to do prediction
     test_ex_splits = [feat for feat in example_store[0].split('|')]
     test_gt = test_ex_splits[0]
     test_ex = '|' + '|'.join(test_ex_splits[1:])
     prediction = vw.predict(vw.example(test_ex))
     print(f'Test gt: {test_gt}, predicted: {prediction}')
 
+    #vw.finish()
+    # # Test how to load from file and do prediction
+    # vw = pyvw.vw('-i my_best_model')
+    # prediction = vw.predict(vw.example(test_ex))
+    # print(f'Test gt: {test_gt}, predicted: {prediction}')
+    # vw.finish()
+
+    # create validation examples
+    val_store = create_vw_examples(val_iter, 
+                        args.context_length, 
+                        stoe, 
+                        stoi, 
+                        num_max_examples=args.max_examples)
+
+    cum_acc = 0
+    ex_counter = 0
+    for ex in val_store:
+        val_ex_splits = [feat for feat in ex.split('|')]
+        val_gt = val_ex_splits[0]
+        val_ex = '|' + '|'.join(val_ex_splits[1:])
+        prediction = vw.predict(vw.example(val_ex))
+        if prediction == int(val_gt):
+            cum_acc += 1
+        ex_counter += 1
+    
+    print(f'Accuracy over {ex_counter} val examples: {cum_acc/ex_counter}')
+
+    
     vw.finish()
 
-    vw = pyvw.vw('-i my_best_model')
-    prediction = vw.predict(vw.example(test_ex))
-    print(f'Test gt: {test_gt}, predicted: {prediction}')
-    vw.finish()
+                    
+    
 
 
 
