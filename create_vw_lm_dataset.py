@@ -5,6 +5,7 @@ from typing import Tuple, Dict, List
 from collections import defaultdict
 from tqdm import tqdm
 import os
+import time
 
 import torch
 from torch import nn, Tensor
@@ -18,59 +19,60 @@ from torchtext.vocab import build_vocab_from_iterator
 
 from vowpalwabbit import pyvw
 
+def create_char_seqs(text_str:str, context_length:int)->Tuple[List[List[str]], List[str]]:
+    chars = list(text_str.rstrip('\n'))
+    if len(chars) < context_length + 1:
+        return None, None
+    else:
+        seqs = []
+        targets = []
+        end = len(chars) - context_length
+        for s in range(end):
+            seq = chars[s:s+context_length]
+            target = chars[s+context_length]
+            seqs.append(seq)
+            targets.append(target)
+        return seqs, targets
+            
 
 def create_vw_examples(raw_text_iter: dataset.IterableDataset, 
                         context_length:int, 
-                        stoe:Dict[str, List[float]], 
                         stoi:Dict[str, int],
-                        vw_file_name: str,
+                        vw_file_name:str,
                         num_max_examples: int=-1):
     # extract character sequences of context length and the next target character
-    char_seqs = []
-    char_targets = []
-    for item in raw_text_iter:
-        chars = list(item.rstrip('\n'))
-        if len(chars) < context_length + 1:
-            continue
-        else:
-            end = len(chars) - context_length
-            for s in range(end):
-                seq = chars[s:s+context_length]
-                target = chars[s+context_length]
-                char_seqs.append(seq)
-                char_targets.append(target)
-
-    print(f'created {len(char_seqs)} examples')
-
-    # featurize each example
-    example_store = []
     
-    for char_seq, char_target in tqdm(zip(char_seqs, char_targets)):
-
-        if num_max_examples > 0 and len(example_store) > num_max_examples:
-            break
-
-        target_idx = stoi[char_target]
-        if target_idx == -1:
-            continue
-        feature_string = ''
-        feature_list = []
-        for idx,char in enumerate(char_seq):
-            embed = stoe[char]
-            if embed == 'missing':
-                continue
-            feature_list.append(embed)
-        for idx, embed in enumerate(feature_list):
-            feature_string += '|' + str(idx) + ' '
-            for fidx, feat in enumerate(embed):
-                feature_string += str(fidx) + ':' + feat + ' '
-        example_string = str(target_idx) + ' ' + feature_string + '\n'
-        example_store.append(example_string)
-
-    # shuffle the examples
-    random.shuffle(example_store)
+    ex_counter = 0
     with open(vw_file_name, 'w') as f:
-        f.writelines(example_store)
+        for item in tqdm(raw_text_iter):
+            if num_max_examples > 0 and ex_counter > num_max_examples:
+                break
+            seqs, targets = create_char_seqs(item, context_length)
+            if seqs:
+                for seq, target in zip(seqs, targets):
+                    target_idx = stoi[target]
+                    if target_idx == -1:
+                        continue
+                    feature_str = ''
+                    for idx, char in enumerate(seq):
+                        token_id = stoi[char]
+                        if token_id == 'missing':
+                            token_id = stoi['<unk>']
+                        feature_str += '|' + str(idx) + ' ' + str(token_id) + ' '
+                    ex_str = str(target_idx) + ' ' + feature_str + '\n'
+                    f.write(ex_str)
+                    ex_counter += 1
+
+                            
+
+    
+
+
+
+
+
+
+
         
 
 
@@ -112,12 +114,23 @@ def main():
     # create vw examples
     train_iter, val_iter, test_iter = WikiText2()
     vw_file_name = os.path.join(args.output_dir, args.vw_file_name)
-    create_vw_examples(train_iter, 
-                        args.context_length, 
-                        stoe, 
-                        stoi, 
-                        vw_file_name, 
-                        num_max_examples=args.max_examples)
+    # create_vw_examples(train_iter, 
+    #                     args.context_length, 
+    #                     stoi, 
+    #                     vw_file_name, 
+    #                     num_max_examples=args.max_examples)
+
+    # convert the embedding dictionary to VW format
+    edict_save_name = os.path.join(args.output_dir, 'embeddings_vw.dict')
+    with open(edict_save_name, 'w') as f:
+        for k, v in itoe.items():
+            estring = str(k) + ' '
+            for idx, feat in enumerate(v):
+                estring += str(idx) + ':' + str(feat) + ' '
+            estring += '\n'
+            f.write(estring)
+
+
 
 
     

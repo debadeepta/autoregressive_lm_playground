@@ -5,6 +5,7 @@ from typing import Tuple, Dict, List
 from collections import defaultdict
 from tqdm import tqdm
 import os
+import time 
 
 import torch
 from torch import nn, Tensor
@@ -44,6 +45,7 @@ def featurize_char_seqs(char_seqs:List[List[str]],
     # featurize each example
     example_store = []
     
+    # we could parallelize at this loop level
     for char_seq, char_target in tqdm(zip(char_seqs, char_targets)):
 
         if num_max_examples > 0 and len(example_store) > num_max_examples:
@@ -54,16 +56,23 @@ def featurize_char_seqs(char_seqs:List[List[str]],
             continue
         feature_string = ''
         feature_list = []
+
+        tic = time.perf_counter()
         for idx,char in enumerate(char_seq):
             embed = stoe[char]
             if embed == 'missing':
                 embed = stoe['<unk>']
             feature_list.append(embed)
+        toc = time.perf_counter()
+
+        tic = time.perf_counter()
         for idx, embed in enumerate(feature_list):
             feature_string += '|' + str(idx) + ' '
             for fidx, feat in enumerate(embed):
                 feature_string += str(fidx) + ':' + feat + ' '
         example_string = str(target_idx) + ' ' + feature_string + '\n'
+        toc = time.perf_counter()
+        
         example_store.append(example_string) 
 
     return example_store
@@ -76,18 +85,26 @@ def create_vw_examples(raw_text_iter: dataset.IterableDataset,
     # extract character sequences of context length and the next target character
     char_seqs = []
     char_targets = []
-    for item in raw_text_iter:
+    tic = time.perf_counter()
+    for item in tqdm(raw_text_iter):
         seqs, targets = create_char_seqs(item, context_length)
         if seqs:
             char_seqs.extend(seqs)
             char_targets.extend(targets)
 
     print(f'created {len(char_seqs)} examples')
+    toc = time.perf_counter()
+    print(f'Time to create char seqs and targets {toc - tic:0.4f} s')
 
+    tic = time.perf_counter()
     example_store = featurize_char_seqs(char_seqs, 
                                         char_targets, 
                                         num_max_examples, 
                                         stoe, stoi)
+    toc = time.perf_counter()
+    print(f'Time to create featurize char seqs {toc - tic:0.4f} s')
+    print(f'Avg. time to featurize an example {(toc - tic)/len(example_store):0.4f} s')
+
     # shuffle the examples
     random.shuffle(example_store)
     return example_store    
