@@ -58,22 +58,10 @@ def create_vw_examples(raw_text_iter: dataset.IterableDataset,
                         token_id = stoi[char]
                         if token_id == 'missing':
                             token_id = stoi['<unk>']
-                        feature_str += '|' + str(idx) + ' ' + str(token_id) + ' '
-                    ex_str = str(target_idx) + ' ' + feature_str + '\n'
+                        feature_str += str(token_id) + ' '
+                    ex_str = str(target_idx) + ' ' + '|e ' +  feature_str + '\n'
                     f.write(ex_str)
                     ex_counter += 1
-
-                            
-
-    
-
-
-
-
-
-
-
-        
 
 
 def main():
@@ -114,11 +102,11 @@ def main():
     # create vw examples
     train_iter, val_iter, test_iter = WikiText2()
     vw_file_name = os.path.join(args.output_dir, args.vw_file_name)
-    # create_vw_examples(train_iter, 
-    #                     args.context_length, 
-    #                     stoi, 
-    #                     vw_file_name, 
-    #                     num_max_examples=args.max_examples)
+    create_vw_examples(train_iter, 
+                        args.context_length, 
+                        stoi, 
+                        vw_file_name, 
+                        num_max_examples=args.max_examples)
 
     # convert the embedding dictionary to VW format
     edict_save_name = os.path.join(args.output_dir, 'embeddings_vw.dict')

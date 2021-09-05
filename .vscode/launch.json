@@ -20,9 +20,9 @@
             "args": ["--output-dir", "C:\\Users\\dedey\\dataroot\\textpred\\wikitext2-vw", 
                 "--vocab-embeddings-file", 
                 "C:\\Users\\dedey\\dataroot\\textpred\\transxl_char_params_80M_input_lookup.json", 
-                "--context-length", "20",
+                "--context-length", "100",
                 "--max-examples", "-1",
-                "--vw-file-name", "wikitext2_train_cl20_100k_vw"]
+                "--vw-file-name", "wikitext2_train_cl100_vw"]
         },
         {
             "name": "Train VW on WikiText",
