@@ -2,7 +2,7 @@ import math
 import random
 import argparse
 from typing import Tuple, Dict, List
-from collections import defaultdict
+from collections import defaultdict, Counter
 from tqdm import tqdm
 import os
 import time
@@ -41,7 +41,7 @@ def create_vw_examples(raw_text_iter: dataset.IterableDataset,
                         vw_file_name:str,
                         num_max_examples: int=-1):
     # extract character sequences of context length and the next target character
-    
+    target_counter = Counter()
     ex_counter = 0
     with open(vw_file_name, 'w') as f:
         for item in tqdm(raw_text_iter):
@@ -53,15 +53,18 @@ def create_vw_examples(raw_text_iter: dataset.IterableDataset,
                     target_idx = stoi[target]
                     if target_idx == -1:
                         continue
+                    target_counter.update(str(target_idx))
                     feature_str = ''
                     for idx, char in enumerate(seq):
                         token_id = stoi[char]
-                        if token_id == 'missing':
+                        if token_id == -1:
                             token_id = stoi['<unk>']
                         feature_str += str(token_id) + ' '
                     ex_str = str(target_idx) + ' ' + '|e ' +  feature_str + '\n'
                     f.write(ex_str)
                     ex_counter += 1
+    
+    print(target_counter)
 
 
 def main():
@@ -75,8 +78,8 @@ def main():
                         help='number of last character embeddings to use as features')
     parser.add_argument('--max-examples', '-m', type=int,
                         help='maximum number of examples to generate in vw format')
-    parser.add_argument('--vw-file-name', '-f', type=str,
-                        help='name of the vw data file')
+    parser.add_argument('--dataset', '-f', type=str,
+                        help='dataset name [WikiText2, WikiText103]')
     args, extra_args = parser.parse_known_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -98,10 +101,22 @@ def main():
             stoe[token] = embed
             itoe[idx] = embed
 
-
     # create vw examples
-    train_iter, val_iter, test_iter = WikiText2()
-    vw_file_name = os.path.join(args.output_dir, args.vw_file_name)
+    if args.dataset == 'WikiText2':
+        train_iter, val_iter, test_iter = WikiText2()
+    elif args.dataset == 'WikiText103':
+        train_iter, val_iter, test_iter = WikiText103()
+    else:
+        raise argparse.ArgumentError
+
+    # create VW filename
+    if args.max_examples == -1:
+        max_examples_str = 'max'
+    else:
+        max_examples_str = str(args.max_examples)
+    vw_file_name = f'{args.dataset}_cl{args.context_length}_e{len(embed)}_numex{max_examples_str}.vw'
+    vw_file_name = os.path.join(args.output_dir, vw_file_name)
+
     create_vw_examples(train_iter, 
                         args.context_length, 
                         stoi, 

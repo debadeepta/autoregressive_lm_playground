@@ -22,10 +22,10 @@
                 "C:\\Users\\dedey\\dataroot\\textpred\\transxl_char_params_80M_input_lookup.json", 
                 "--context-length", "100",
                 "--max-examples", "-1",
-                "--vw-file-name", "wikitext2_train_cl100_vw"]
+                "--dataset", "WikiText2"]
         },
         {
-            "name": "Train VW on WikiText",
+            "name": "Train Python VW Directly",
             "type": "python",
             "request": "launch",
             "program": "${cwd}/train_vw_on_wikitext.py",
