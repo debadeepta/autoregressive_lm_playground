@@ -6,6 +6,7 @@ from collections import defaultdict, Counter
 from tqdm import tqdm
 import os
 import time
+from pathlib import Path
 
 import torch
 from torch import nn, Tensor
@@ -53,7 +54,7 @@ def create_vw_examples(raw_text_iter: dataset.IterableDataset,
                     target_idx = stoi[target]
                     if target_idx == -1:
                         continue
-                    target_counter.update(str(target_idx))
+                    target_counter.update([target_idx])
                     feature_str = ''
                     for idx, char in enumerate(seq):
                         token_id = stoi[char]
@@ -124,7 +125,8 @@ def main():
                         num_max_examples=args.max_examples)
 
     # convert the embedding dictionary to VW format
-    edict_save_name = os.path.join(args.output_dir, 'embeddings_vw.dict')
+    edict_partial_name = Path(args.vocab_embeddings_file).stem + '.dict'
+    edict_save_name = Path(args.output_dir) / edict_partial_name
     with open(edict_save_name, 'w') as f:
         for k, v in itoe.items():
             estring = str(k) + ' '

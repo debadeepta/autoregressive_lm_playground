@@ -19,7 +19,7 @@
             "console": "integratedTerminal",
             "args": ["--output-dir", "C:\\Users\\dedey\\dataroot\\textpred\\wikitext2-vw", 
                 "--vocab-embeddings-file", 
-                "C:\\Users\\dedey\\dataroot\\textpred\\transxl_char_params_80M_input_lookup.json", 
+                "C:\\Users\\dedey\\dataroot\\textpred\\transxl_char_params_80M_input_lookup_150embed.json", 
                 "--context-length", "100",
                 "--max-examples", "-1",
                 "--dataset", "WikiText2"]
@@ -32,7 +32,7 @@
             "console": "integratedTerminal",
             "args": ["--output-dir", "C:\\Users\\dedey\\dataroot\\textpred\\wikitext2-vw", 
                 "--vocab-embeddings-file", 
-                "C:\\Users\\dedey\\dataroot\\textpred\\transxl_char_params_80M_input_lookup.json", 
+                "C:\\Users\\dedey\\dataroot\\textpred\\transxl_char_params_80M_input_lookup_750embed.json", 
                 "--context-length", "600",
                 "--max-examples", "50",
                 "--num-passes", "10"]
